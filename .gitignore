@@ -1,0 +1,38 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Global Python environment
+.venv/
+venv/
+
+# Environment files
+.env
+.env.*
+!**/.env.example
+
+# Logs
+*.log
+
+# Backend (Django / Python)
+Backend/__pycache__/
+Backend/*.py[cod]
+Backend/.Python
+Backend/db.sqlite3
+Backend/staticfiles/
+Backend/media/
+Backend/.pytest_cache/
+Backend/.mypy_cache/
+Backend/.ruff_cache/
+
+# Frontend (Flutter)
+Frontend/.dart_tool/
+Frontend/.flutter-plugins
+Frontend/.flutter-plugins-dependencies
+Frontend/.pub/
+Frontend/build/
