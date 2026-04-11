@@ -16,3 +16,13 @@ Django backend configured for API development with DRF and CORS.
 ## API
 
 - Health check: `GET /api/health/`
+- Register: `POST /api/auth/register/`
+- Login: `POST /api/auth/login/`
+
+## Mobile connectivity (Android device)
+
+1. Start backend on all interfaces:
+   - `python manage.py runserver 0.0.0.0:8000`
+2. Find your PC LAN IP (example `192.168.1.10`)
+3. Run Flutter with API URL:
+   - `flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8000/api`

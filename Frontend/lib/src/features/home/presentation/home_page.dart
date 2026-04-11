@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -6,10 +8,21 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.watch<AuthController>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Veda App'),
+        title: const Text('Ashray Home'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await context.read<AuthController>().logout();
+              if (!context.mounted) return;
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -24,12 +37,12 @@ class HomePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Flutter frontend is initialized',
+                      'You are logged in',
                       style: theme.textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Add features under lib/src/features and shared code under lib/src/core.',
+                      auth.user?.email ?? 'Session restored from saved token.',
                       style: theme.textTheme.bodyLarge,
                     ),
                   ],
