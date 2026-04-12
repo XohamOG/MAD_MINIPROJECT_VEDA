@@ -32,6 +32,15 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
     final savedToken = await _tokenStorage.getToken();
     _token = savedToken;
+    if (_token != null && _token!.isNotEmpty) {
+      try {
+        _user = await _apiService.fetchMe(token: _token!);
+      } on ApiException catch (_) {
+        _token = null;
+        _user = null;
+        await _tokenStorage.clearToken();
+      }
+    }
     _isCheckingSession = false;
     notifyListeners();
   }
@@ -64,6 +73,14 @@ class AuthController extends ChangeNotifier {
     required String email,
     required String phone,
     required String password,
+    String? dateOfBirth,
+    String? bloodGroup,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? bpReading,
+    String? sugarLevel,
+    String? heartRate,
+    String? weight,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -75,6 +92,14 @@ class AuthController extends ChangeNotifier {
         email: email,
         phone: phone,
         password: password,
+        dateOfBirth: dateOfBirth,
+        bloodGroup: bloodGroup,
+        emergencyContactName: emergencyContactName,
+        emergencyContactPhone: emergencyContactPhone,
+        bpReading: bpReading,
+        sugarLevel: sugarLevel,
+        heartRate: heartRate,
+        weight: weight,
       );
       _token = result.token;
       _user = result.user;

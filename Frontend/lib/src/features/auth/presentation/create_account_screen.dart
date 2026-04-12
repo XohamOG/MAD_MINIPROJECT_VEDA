@@ -19,6 +19,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _bloodGroupController = TextEditingController();
+  final _emergencyNameController = TextEditingController();
+  final _emergencyPhoneController = TextEditingController();
+  final _bpController = TextEditingController();
+  final _sugarController = TextEditingController();
+  final _heartRateController = TextEditingController();
+  final _weightController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -29,6 +37,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _dobController.dispose();
+    _bloodGroupController.dispose();
+    _emergencyNameController.dispose();
+    _emergencyPhoneController.dispose();
+    _bpController.dispose();
+    _sugarController.dispose();
+    _heartRateController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -105,6 +121,96 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
+                  controller: _dobController,
+                  readOnly: true,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Date of birth',
+                    prefixIcon: Icon(Icons.cake_outlined),
+                  ),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime(1990),
+                      firstDate: DateTime(1940),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      _dobController.text = picked.toIso8601String().split('T').first;
+                    }
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _bloodGroupController,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Blood group',
+                    prefixIcon: Icon(Icons.bloodtype_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _emergencyNameController,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Emergency contact name',
+                    prefixIcon: Icon(Icons.contact_phone_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _emergencyPhoneController,
+                  keyboardType: TextInputType.phone,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Emergency contact phone',
+                    prefixIcon: Icon(Icons.phone_in_talk_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Health metrics',
+                  style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _bpController,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'BP (e.g. 120/80)',
+                    prefixIcon: Icon(Icons.monitor_heart_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _sugarController,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Sugar level (mg/dL)',
+                    prefixIcon: Icon(Icons.science_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _heartRateController,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Heart rate (bpm)',
+                    prefixIcon: Icon(Icons.favorite_border_rounded),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _weightController,
+                  style: textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg)',
+                    prefixIcon: Icon(Icons.monitor_weight_outlined),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   style: textTheme.bodyLarge,
@@ -163,6 +269,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         email: _emailController.text,
                         phone: _phoneController.text,
                         password: _passwordController.text,
+                        dateOfBirth: _dobController.text.trim(),
+                        bloodGroup: _bloodGroupController.text.trim(),
+                        emergencyContactName: _emergencyNameController.text.trim(),
+                        emergencyContactPhone: _emergencyPhoneController.text.trim(),
+                        bpReading: _bpController.text.trim(),
+                        sugarLevel: _sugarController.text.trim(),
+                        heartRate: _heartRateController.text.trim(),
+                        weight: _weightController.text.trim(),
                       );
                       if (!mounted) return;
                       if (ok) {

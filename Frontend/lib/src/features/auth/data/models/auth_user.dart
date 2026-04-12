@@ -8,6 +8,10 @@ class AuthUser {
     this.bloodGroup,
     this.emergencyContactName,
     this.emergencyContactPhone,
+    this.bpReading,
+    this.sugarLevel,
+    this.heartRate,
+    this.weight,
   });
 
   final int id;
@@ -18,6 +22,10 @@ class AuthUser {
   final String? bloodGroup;
   final String? emergencyContactName;
   final String? emergencyContactPhone;
+  final String? bpReading;
+  final String? sugarLevel;
+  final String? heartRate;
+  final String? weight;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -29,6 +37,10 @@ class AuthUser {
       bloodGroup: json['blood_group'] as String?,
       emergencyContactName: json['emergency_contact_name'] as String?,
       emergencyContactPhone: json['emergency_contact_phone'] as String?,
+      bpReading: json['bp_reading'] as String?,
+      sugarLevel: json['sugar_level'] as String?,
+      heartRate: json['heart_rate'] as String?,
+      weight: json['weight'] as String?,
     );
   }
 }

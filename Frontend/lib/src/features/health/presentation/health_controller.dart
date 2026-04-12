@@ -94,6 +94,24 @@ class HealthController extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteAppointment({
+    required String token,
+    required int id,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _apiService.deleteAppointment(token: token, id: id);
+      _appointments = _appointments.where((item) => item['id'] != id).toList();
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchAppointments(String token) async {
     _errorMessage = null;
     notifyListeners();
@@ -133,6 +151,24 @@ class HealthController extends ChangeNotifier {
       return false;
     } finally {
       _isUploadingReport = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteReport({
+    required String token,
+    required int id,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _apiService.deleteReport(token: token, id: id);
+      _reports = _reports.where((item) => item['id'] != id).toList();
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
       notifyListeners();
     }
   }

@@ -93,7 +93,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         subtitle: Text(
                           '${item['appointment_date'] ?? ''}  ${item['appointment_time'] ?? ''}',
                         ),
-                        trailing: Text((item['status'] ?? 'scheduled').toString()),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text((item['status'] ?? 'scheduled').toString()),
+                            IconButton(
+                              onPressed: () => _deleteAppointment(item['id'] as int?),
+                              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFC62828)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -101,6 +110,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _deleteAppointment(int? id) async {
+    if (id == null) return;
+    final token = context.read<AuthController>().token;
+    if (token == null || token.isEmpty) return;
+    final ok = await context.read<HealthController>().deleteAppointment(token: token, id: id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'Appointment deleted.' : context.read<HealthController>().errorMessage ?? 'Delete failed'),
       ),
     );
   }

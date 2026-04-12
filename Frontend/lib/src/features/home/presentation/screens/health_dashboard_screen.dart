@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/home/presentation/main_shell.dart';
 
 class HealthDashboardScreen extends StatelessWidget {
@@ -6,6 +8,7 @@ class HealthDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthController>().user;
     return Column(
       children: [
         const GradientHeader(
@@ -23,11 +26,17 @@ class HealthDashboardScreen extends StatelessWidget {
                 crossAxisSpacing: 10,
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
-                children: const [
-                  _MetricCard(title: 'BP', value: '120/80'),
-                  _MetricCard(title: 'Sugar', value: '102 mg/dL'),
-                  _MetricCard(title: 'Heart Rate', value: '74 bpm'),
-                  _MetricCard(title: 'Weight', value: '68 kg'),
+                children: [
+                  _MetricCard(title: 'BP', value: user?.bpReading?.isNotEmpty == true ? user!.bpReading! : '--'),
+                  _MetricCard(
+                    title: 'Sugar',
+                    value: user?.sugarLevel?.isNotEmpty == true ? '${user!.sugarLevel} mg/dL' : '--',
+                  ),
+                  _MetricCard(
+                    title: 'Heart Rate',
+                    value: user?.heartRate?.isNotEmpty == true ? '${user!.heartRate} bpm' : '--',
+                  ),
+                  _MetricCard(title: 'Weight', value: user?.weight?.isNotEmpty == true ? '${user!.weight} kg' : '--'),
                 ],
               ),
               const SizedBox(height: 12),

@@ -176,8 +176,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   ),
                                   const SizedBox(width: 6),
                                   _MiniIconButton(
-                                    icon: Icons.share_rounded,
-                                    onTap: () {},
+                                    icon: Icons.delete_outline_rounded,
+                                    onTap: () => _deleteReport(report['id'] as int?),
                                   ),
                                 ],
                               ),
@@ -213,6 +213,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _deleteReport(int? id) async {
+    if (id == null) return;
+    final token = context.read<AuthController>().token;
+    if (token == null || token.isEmpty) return;
+    final ok = await context.read<HealthController>().deleteReport(token: token, id: id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(ok ? 'Report deleted.' : context.read<HealthController>().errorMessage ?? 'Delete failed')),
     );
   }
 }

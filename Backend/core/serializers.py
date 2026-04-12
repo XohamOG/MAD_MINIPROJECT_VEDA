@@ -16,6 +16,10 @@ class UserSerializer(serializers.ModelSerializer):
             "blood_group",
             "emergency_contact_name",
             "emergency_contact_phone",
+            "bp_reading",
+            "sugar_level",
+            "heart_rate",
+            "weight",
             "joined_at",
         )
         read_only_fields = ("id", "joined_at")
@@ -26,7 +30,20 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "full_name", "password", "phone")
+        fields = (
+            "email",
+            "full_name",
+            "password",
+            "phone",
+            "date_of_birth",
+            "blood_group",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "bp_reading",
+            "sugar_level",
+            "heart_rate",
+            "weight",
+        )
 
     def create(self, validated_data):
         password = validated_data.pop("password")

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:veda_app/src/core/config/app_config.dart';
 import 'package:veda_app/src/core/network/api_exception.dart';
 import 'package:veda_app/src/features/auth/data/models/auth_response.dart';
+import 'package:veda_app/src/features/auth/data/models/auth_user.dart';
 
 class ApiService {
   ApiService({http.Client? client}) : _client = client ?? http.Client();
@@ -26,19 +27,45 @@ class ApiService {
     return AuthResponse.fromJson(response);
   }
 
+  Future<AuthUser> fetchMe({
+    required String token,
+  }) async {
+    final response = await _safeGet('/auth/me/', token: token);
+    if (response is Map<String, dynamic>) {
+      return AuthUser.fromJson(response);
+    }
+    throw ApiException('Invalid user profile response.');
+  }
+
   Future<AuthResponse> register({
     required String fullName,
     required String email,
     required String phone,
     required String password,
+    String? dateOfBirth,
+    String? bloodGroup,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? bpReading,
+    String? sugarLevel,
+    String? heartRate,
+    String? weight,
   }) async {
     final response = await _safePost(
       '/auth/register/',
-      body: {
+      body: <String, dynamic>{
         'full_name': fullName.trim(),
         'email': email.trim(),
         'phone': phone.trim(),
         'password': password,
+        if (dateOfBirth != null && dateOfBirth.isNotEmpty) 'date_of_birth': dateOfBirth,
+        if (bloodGroup != null && bloodGroup.isNotEmpty) 'blood_group': bloodGroup,
+        if (emergencyContactName != null && emergencyContactName.isNotEmpty) 'emergency_contact_name': emergencyContactName,
+        if (emergencyContactPhone != null && emergencyContactPhone.isNotEmpty) 'emergency_contact_phone': emergencyContactPhone,
+        if (bpReading != null && bpReading.isNotEmpty) 'bp_reading': bpReading,
+        if (sugarLevel != null && sugarLevel.isNotEmpty) 'sugar_level': sugarLevel,
+        if (heartRate != null && heartRate.isNotEmpty) 'heart_rate': heartRate,
+        if (weight != null && weight.isNotEmpty) 'weight': weight,
       },
     );
     return AuthResponse.fromJson(response);
@@ -79,6 +106,13 @@ class ApiService {
     required Map<String, dynamic> payload,
   }) async {
     return await _safePost('/appointments/', body: payload, token: token);
+  }
+
+  Future<void> deleteAppointment({
+    required String token,
+    required int id,
+  }) async {
+    await _safeDelete('/appointments/$id/', token: token);
   }
 
   Future<Map<String, dynamic>> triggerSos({
@@ -137,6 +171,13 @@ class ApiService {
     }
   }
 
+  Future<void> deleteReport({
+    required String token,
+    required int id,
+  }) async {
+    await _safeDelete('/reports/$id/', token: token);
+  }
+
   Future<dynamic> _safeGet(String path, {String? token}) async {
     try {
       final response = await _client
@@ -184,6 +225,37 @@ class ApiService {
       }
       throw ApiException(
         _extractMessage(data) ?? 'Request failed.',
+        statusCode: response.statusCode,
+      );
+    } on TimeoutException {
+      throw ApiException('Request timed out. Please try again.');
+    } on SocketException {
+      throw ApiException('No internet connection.');
+    } on http.ClientException {
+      throw ApiException('Network error. Check backend URL.');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Unexpected error occurred.');
+    }
+  }
+
+  Future<void> _safeDelete(
+    String path, {
+    String? token,
+  }) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('${AppConfig.baseUrl}$path'),
+            headers: _headers(token: token),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      }
+      final data = _decodeJson(response.body);
+      throw ApiException(
+        _extractMessage(data) ?? 'Delete failed.',
         statusCode: response.statusCode,
       );
     } on TimeoutException {
