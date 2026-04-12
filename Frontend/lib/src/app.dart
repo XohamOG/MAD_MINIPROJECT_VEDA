@@ -6,6 +6,7 @@ import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/auth/presentation/create_account_screen.dart';
 import 'package:veda_app/src/features/auth/presentation/login_screen.dart';
 import 'package:veda_app/src/features/auth/presentation/splash_screen.dart';
+import 'package:veda_app/src/features/health/presentation/health_controller.dart';
 import 'package:veda_app/src/features/home/presentation/home_page.dart';
 import 'package:veda_app/src/theme/app_theme.dart';
 
@@ -14,11 +15,19 @@ class VedaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthController(
-        apiService: ApiService(),
-        tokenStorage: TokenStorage(),
-      )..restoreSession(),
+    final apiService = ApiService();
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthController(
+            apiService: apiService,
+            tokenStorage: TokenStorage(),
+          )..restoreSession(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HealthController(apiService: apiService),
+        ),
+      ],
       child: MaterialApp(
         title: 'Veda',
         debugShowCheckedModeBanner: false,

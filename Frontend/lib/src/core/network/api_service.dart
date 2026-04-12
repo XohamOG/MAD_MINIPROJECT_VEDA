@@ -54,11 +54,47 @@ class ApiService {
     throw ApiException('Invalid medications response.');
   }
 
+  Future<List<Map<String, dynamic>>> fetchReports({
+    required String token,
+  }) async {
+    final response = await _safeGet('/reports/', token: token);
+    if (response is List) {
+      return response.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException('Invalid reports response.');
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAppointments({
+    required String token,
+  }) async {
+    final response = await _safeGet('/appointments/', token: token);
+    if (response is List) {
+      return response.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException('Invalid appointments response.');
+  }
+
   Future<Map<String, dynamic>> addAppointment({
     required String token,
     required Map<String, dynamic> payload,
   }) async {
     return await _safePost('/appointments/', body: payload, token: token);
+  }
+
+  Future<Map<String, dynamic>> triggerSos({
+    required String token,
+    required String message,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final payload = <String, dynamic>{'message': message};
+    if (latitude != null) payload['latitude'] = latitude;
+    if (longitude != null) payload['longitude'] = longitude;
+    return await _safePost(
+      '/sos-logs/trigger/',
+      body: payload,
+      token: token,
+    );
   }
 
   Future<Map<String, dynamic>> uploadReport({

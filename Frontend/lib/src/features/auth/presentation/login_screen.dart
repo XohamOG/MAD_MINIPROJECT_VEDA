@@ -32,152 +32,179 @@ class _LoginScreenState extends State<LoginScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Log in'),
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Welcome back', style: textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                Text(
-                  'Sign in to continue using Ashray',
-                  style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.splashGradientTop, AppColors.splashGradientBottom],
                 ),
-                const SizedBox(height: 20),
-                AuthSocialButton(
-                  label: 'Continue with Google',
-                  icon: Icons.g_mobiledata_rounded,
-                  backgroundColor: AppColors.google,
-                  onPressed: () {},
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
                 ),
-                const SizedBox(height: 12),
-                AuthSocialButton(
-                  label: 'Continue with Apple',
-                  icon: Icons.apple_rounded,
-                  backgroundColor: AppColors.apple,
-                  onPressed: () {},
-                ),
-                const SizedBox(height: 12),
-                AuthSocialButton(
-                  label: 'Continue with Facebook',
-                  icon: Icons.facebook_rounded,
-                  backgroundColor: AppColors.facebook,
-                  onPressed: () {},
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        'or login with email',
-                        style: textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
-                      ),
-                    ),
-                    const Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: textTheme.bodyLarge,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'you@example.com',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter email.';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscure,
-                  style: textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                      icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter password.';
-                    }
-                    if (value.length < 8) {
-                      return 'Password must be at least 8 characters.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (!_formKey.currentState!.validate()) {
-                        return;
-                      }
-                      final auth = context.read<AuthController>();
-                      final ok = await auth.login(
-                        email: _emailController.text,
-                        password: _passwordController.text,
-                      );
-                      if (!mounted) return;
-                      if (ok) {
-                        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(auth.errorMessage ?? 'Login failed.'),
-                          ),
-                        );
-                      }
-                    },
-                    child: context.watch<AuthController>().isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.8,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Log in'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushNamed(CreateAccountScreen.routeName);
-                    },
-                    child: const Text(
-                      'New here? Create account',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              child: Text(
+                'Welcome back',
+                style: textTheme.headlineSmall?.copyWith(color: Colors.white),
+              ),
             ),
-          ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sign in to continue using Ashray',
+                        style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
+                      ),
+                      const SizedBox(height: 20),
+                      AuthSocialButton(
+                        label: 'Continue with Google',
+                        icon: Icons.g_mobiledata_rounded,
+                        backgroundColor: AppColors.google,
+                        onPressed: () {},
+                      ),
+                      const SizedBox(height: 12),
+                      AuthSocialButton(
+                        label: 'Continue with Apple',
+                        icon: Icons.apple_rounded,
+                        backgroundColor: AppColors.apple,
+                        onPressed: () {},
+                      ),
+                      const SizedBox(height: 12),
+                      AuthSocialButton(
+                        label: 'Continue with Facebook',
+                        icon: Icons.facebook_rounded,
+                        backgroundColor: AppColors.facebook,
+                        onPressed: () {},
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              'or login with email',
+                              style: textTheme.bodyMedium?.copyWith(color: AppColors.mutedText),
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: textTheme.bodyLarge,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'you@example.com',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter email.';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Please enter a valid email.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscure,
+                        style: textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                            icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter password.';
+                          }
+                          if (value.length < 8) {
+                            return 'Password must be at least 8 characters.';
+                          }
+                          return null;
+                        },
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          child: const Text('Forgot password'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (!_formKey.currentState!.validate()) {
+                              return;
+                            }
+                            final auth = context.read<AuthController>();
+                            final ok = await auth.login(
+                              email: _emailController.text,
+                              password: _passwordController.text,
+                            );
+                            if (!mounted) return;
+                            if (ok) {
+                              Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(auth.errorMessage ?? 'Login failed.'),
+                                ),
+                              );
+                            }
+                          },
+                          child: context.watch<AuthController>().isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.8,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('Log in'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(CreateAccountScreen.routeName);
+                          },
+                          child: const Text(
+                            'New here? Create account',
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
