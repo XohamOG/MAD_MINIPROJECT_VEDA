@@ -8,6 +8,8 @@ import 'package:veda_app/src/features/home/presentation/screens/health_dashboard
 import 'package:veda_app/src/features/home/presentation/screens/medication_screen.dart';
 import 'package:veda_app/src/features/home/presentation/screens/digital_prescription_screen.dart';
 import 'package:veda_app/src/features/home/presentation/screens/find_doctor_screen.dart';
+import 'package:veda_app/src/features/home/presentation/screens/notification_simulator_screen.dart';
+import 'package:veda_app/src/features/home/presentation/screens/sensor_simulation_screen.dart';
 import 'package:veda_app/src/features/home/presentation/screens/profile_screen.dart';
 import 'package:veda_app/src/features/home/presentation/screens/reports_screen.dart';
 import 'package:veda_app/src/features/home/presentation/screens/schedule_screen.dart';
@@ -46,6 +48,8 @@ class _MainShellState extends State<MainShell> {
         onOpenDigitalPrescription: _openDigitalPrescriptionScreen,
         onOpenAddReport: _openAddReportScreen,
         onOpenHealthDashboard: _openHealthDashboardScreen,
+        onOpenNotificationSimulator: _openNotificationSimulatorScreen,
+        onOpenSensorSimulation: _openSensorSimulationScreen,
       ),
       const ScheduleScreen(),
       const ReportsScreen(),
@@ -63,13 +67,22 @@ class _MainShellState extends State<MainShell> {
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.calendar_month_rounded), label: 'Schedule'),
-          NavigationDestination(icon: Icon(Icons.description_rounded), label: 'Reports'),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_rounded),
+            label: 'Schedule',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.description_rounded),
+            label: 'Reports',
+          ),
           NavigationDestination(
             icon: Icon(Icons.sos_rounded, color: Color(0xFFC62828)),
             label: 'SOS',
           ),
-          NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -82,23 +95,25 @@ class _MainShellState extends State<MainShell> {
   void _openMedicationScreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: SafeArea(child: MedicationScreen())),
+        builder:
+            (_) => const Scaffold(body: SafeArea(child: MedicationScreen())),
       ),
     );
   }
 
   void _openAddReportScreen() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const AddReportScreen(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const AddReportScreen()));
   }
 
   void _openDigitalPrescriptionScreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: SafeArea(child: DigitalPrescriptionScreen())),
+        builder:
+            (_) => const Scaffold(
+              body: SafeArea(child: DigitalPrescriptionScreen()),
+            ),
       ),
     );
   }
@@ -106,7 +121,8 @@ class _MainShellState extends State<MainShell> {
   void _openFindDoctorScreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: SafeArea(child: FindDoctorScreen())),
+        builder:
+            (_) => const Scaffold(body: SafeArea(child: FindDoctorScreen())),
       ),
     );
   }
@@ -114,7 +130,30 @@ class _MainShellState extends State<MainShell> {
   void _openHealthDashboardScreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: SafeArea(child: HealthDashboardScreen())),
+        builder:
+            (_) =>
+                const Scaffold(body: SafeArea(child: HealthDashboardScreen())),
+      ),
+    );
+  }
+
+  void _openNotificationSimulatorScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder:
+            (_) => const Scaffold(
+              body: SafeArea(child: NotificationSimulatorScreen()),
+            ),
+      ),
+    );
+  }
+
+  void _openSensorSimulationScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder:
+            (_) =>
+                const Scaffold(body: SafeArea(child: SensorSimulationScreen())),
       ),
     );
   }
@@ -167,7 +206,9 @@ class GradientHeader extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle!,
-                    style: textTheme.bodyLarge?.copyWith(color: const Color(0xFFEAF8F2)),
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: const Color(0xFFEAF8F2),
+                    ),
                   ),
                 ],
               ],
@@ -208,7 +249,9 @@ class ServiceTile extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -219,11 +262,7 @@ class ServiceTile extends StatelessWidget {
 }
 
 class ActionCard extends StatelessWidget {
-  const ActionCard({
-    required this.title,
-    required this.child,
-    super.key,
-  });
+  const ActionCard({required this.title, required this.child, super.key});
 
   final String title;
   final Widget child;
@@ -238,7 +277,9 @@ class ActionCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             child,

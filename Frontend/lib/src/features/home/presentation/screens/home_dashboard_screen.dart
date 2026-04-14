@@ -12,6 +12,8 @@ class HomeDashboardScreen extends StatelessWidget {
     required this.onOpenFindDoctor,
     required this.onOpenAddReport,
     required this.onOpenHealthDashboard,
+    required this.onOpenNotificationSimulator,
+    required this.onOpenSensorSimulation,
     super.key,
   });
 
@@ -21,6 +23,8 @@ class HomeDashboardScreen extends StatelessWidget {
   final VoidCallback onOpenFindDoctor;
   final VoidCallback onOpenAddReport;
   final VoidCallback onOpenHealthDashboard;
+  final VoidCallback onOpenNotificationSimulator;
+  final VoidCallback onOpenSensorSimulation;
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +37,17 @@ class HomeDashboardScreen extends StatelessWidget {
         children: [
           GradientHeader(
             title: 'How are you?',
-            subtitle: auth.user?.fullName.isNotEmpty == true ? 'Welcome, ${auth.user!.fullName}' : 'Welcome to Ashray',
+            subtitle:
+                auth.user?.fullName.isNotEmpty == true
+                    ? 'Welcome, ${auth.user!.fullName}'
+                    : 'Welcome to Ashray',
             trailing: IconButton(
               onPressed: () async {
                 await context.read<AuthController>().logout();
                 if (!context.mounted) return;
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/', (route) => false);
               },
               icon: const Icon(Icons.logout_rounded, color: Colors.white),
             ),
@@ -60,7 +69,9 @@ class HomeDashboardScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Services',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   GridView.count(
@@ -71,16 +82,54 @@ class HomeDashboardScreen extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     shrinkWrap: true,
                     children: [
-                      ServiceTile(label: 'Medications', icon: Icons.medication_rounded, onTap: onOpenMedication),
-                      ServiceTile(label: 'Digital Prescription', icon: Icons.document_scanner_rounded, onTap: onOpenDigitalPrescription),
-                      ServiceTile(label: 'Find Doctor', icon: Icons.local_hospital_rounded, onTap: onOpenFindDoctor),
-                      ServiceTile(label: 'Add Report', icon: Icons.upload_file_rounded, onTap: onOpenAddReport),
-                      ServiceTile(label: 'Schedule', icon: Icons.calendar_month_rounded, onTap: () => onOpenTab(1)),
-                      ServiceTile(label: 'Health Dashboard', icon: Icons.monitor_heart_rounded, onTap: onOpenHealthDashboard),
+                      ServiceTile(
+                        label: 'Medications',
+                        icon: Icons.medication_rounded,
+                        onTap: onOpenMedication,
+                      ),
+                      ServiceTile(
+                        label: 'Digital Prescription',
+                        icon: Icons.document_scanner_rounded,
+                        onTap: onOpenDigitalPrescription,
+                      ),
+                      ServiceTile(
+                        label: 'Find Doctor',
+                        icon: Icons.local_hospital_rounded,
+                        onTap: onOpenFindDoctor,
+                      ),
+                      ServiceTile(
+                        label: 'Add Report',
+                        icon: Icons.upload_file_rounded,
+                        onTap: onOpenAddReport,
+                      ),
+                      ServiceTile(
+                        label: 'Schedule',
+                        icon: Icons.calendar_month_rounded,
+                        onTap: () => onOpenTab(1),
+                      ),
+                      ServiceTile(
+                        label: 'Health Dashboard',
+                        icon: Icons.monitor_heart_rounded,
+                        onTap: onOpenHealthDashboard,
+                      ),
+                      ServiceTile(
+                        label: 'Notifications',
+                        icon: Icons.notifications_active_rounded,
+                        onTap: onOpenNotificationSimulator,
+                      ),
+                      ServiceTile(
+                        label: 'Sensor Lab',
+                        icon: Icons.sensors_rounded,
+                        onTap: onOpenSensorSimulation,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ServiceTile(label: 'SOS', icon: Icons.sos_rounded, onTap: () => onOpenTab(3)),
+                  ServiceTile(
+                    label: 'SOS',
+                    icon: Icons.sos_rounded,
+                    onTap: () => onOpenTab(3),
+                  ),
                 ],
               ),
             ),
@@ -101,7 +150,12 @@ class _MedicationCard extends StatelessWidget {
     final health = context.watch<HealthController>();
 
     if (health.isLoadingMedications) {
-      return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     final meds = health.medications;
@@ -138,7 +192,8 @@ class _MedicationCard extends StatelessWidget {
         Text('Reminder: ${med['reminder_time'] ?? '--:--'}'),
         const SizedBox(height: 12),
         ElevatedButton(
-          onPressed: () => context.read<HealthController>().markTakenToday(medId),
+          onPressed:
+              () => context.read<HealthController>().markTakenToday(medId),
           child: Text(taken ? 'Marked as Taken' : 'Mark as Taken'),
         ),
       ],
