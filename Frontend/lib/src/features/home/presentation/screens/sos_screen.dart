@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/health/presentation/health_controller.dart';
@@ -14,6 +15,16 @@ class SosScreen extends StatefulWidget {
 class _SosScreenState extends State<SosScreen> {
   final _messageController = TextEditingController(text: 'Need immediate help');
   bool _sending = false;
+  bool _resolvingLocation = false;
+  double? _latitude;
+  double? _longitude;
+  String _locationStatus = 'Location not fetched yet';
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveCurrentLocation();
+  }
 
   @override
   void dispose() {
@@ -91,12 +102,24 @@ class _SosScreenState extends State<SosScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Card(
+                Card(
                   child: ListTile(
-                    leading: Icon(Icons.location_on_rounded, color: Color(0xFFB71C1C)),
-                    title: Text('Location sharing'),
+                    leading: const Icon(Icons.location_on_rounded, color: Color(0xFFB71C1C)),
+                    title: const Text('Location sharing'),
                     subtitle: Text(
-                      'Current location is shared with emergency responders when SOS is pressed.',
+                      _latitude == null || _longitude == null
+                          ? _locationStatus
+                          : 'Lat: ${_latitude!.toStringAsFixed(6)}, Lng: ${_longitude!.toStringAsFixed(6)}',
+                    ),
+                    trailing: IconButton(
+                      onPressed: _resolvingLocation ? null : _resolveCurrentLocation,
+                      icon: _resolvingLocation
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh_rounded),
                     ),
                   ),
                 ),
@@ -113,10 +136,14 @@ class _SosScreenState extends State<SosScreen> {
     final token = auth.token;
     if (token == null || token.isEmpty) return;
 
+        await _resolveCurrentLocation(showSnackOnFailure: true);
+
     setState(() => _sending = true);
     final ok = await context.read<HealthController>().triggerSos(
           token: token,
           message: _messageController.text.trim().isEmpty ? 'Need immediate help' : _messageController.text.trim(),
+          latitude: _latitude,
+          longitude: _longitude,
         );
     if (!mounted) return;
     setState(() => _sending = false);
@@ -124,5 +151,56 @@ class _SosScreenState extends State<SosScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(ok ? 'Emergency alert sent.' : context.read<HealthController>().errorMessage ?? 'Failed')),
     );
+  }
+
+  Future<void> _resolveCurrentLocation({bool showSnackOnFailure = false}) async {
+    if (_resolvingLocation) return;
+    setState(() {
+      _resolvingLocation = true;
+      _locationStatus = 'Fetching GPS location...';
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location service is disabled.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied) {
+        throw Exception('Location permission denied.');
+      }
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission permanently denied. Enable it in phone settings.');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _locationStatus = 'Live GPS location ready';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().replaceFirst('Exception: ', '');
+      setState(() {
+        _locationStatus = message;
+      });
+      if (showSnackOnFailure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } finally {
+      if (!mounted) return;
+      setState(() => _resolvingLocation = false);
+    }
   }
 }

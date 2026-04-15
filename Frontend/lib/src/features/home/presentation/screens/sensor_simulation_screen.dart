@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:veda_app/src/features/home/presentation/main_shell.dart';
 
 class SensorSimulationScreen extends StatefulWidget {
@@ -13,8 +15,11 @@ class SensorSimulationScreen extends StatefulWidget {
 
 class _SensorSimulationScreenState extends State<SensorSimulationScreen> {
   static const int _maxAlertHistoryItems = 40;
+  static const String _hydrationMinutesKey = 'sensor_hydration_minutes';
+  static const String _hydrationGlassesKey = 'sensor_hydration_glasses';
 
   Timer? _coachTimer;
+  StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
 
   double _movementScore = 25;
   int _stepCount = 1200;
@@ -34,9 +39,25 @@ class _SensorSimulationScreenState extends State<SensorSimulationScreen> {
 
   final List<_SensorAlertLog> _alertHistory = <_SensorAlertLog>[];
 
+  double _accelX = 0;
+  double _accelY = 0;
+  double _accelZ = 0;
+  double _gForce = 1;
+  int _shakeCount = 0;
+  bool _accelerometerRunning = false;
+  DateTime? _lastShakeTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHydrationState();
+    _startAccelerometer();
+  }
+
   @override
   void dispose() {
     _stopCoach();
+    _accelerometerSubscription?.cancel();
     super.dispose();
   }
 
@@ -57,6 +78,38 @@ class _SensorSimulationScreenState extends State<SensorSimulationScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              ActionCard(
+                title: '0) Real Accelerometer Sensor',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _infoRow('Sensor status', _accelerometerRunning ? 'Running' : 'Stopped'),
+                    _infoRow('X axis', _accelX.toStringAsFixed(2)),
+                    _infoRow('Y axis', _accelY.toStringAsFixed(2)),
+                    _infoRow('Z axis', _accelZ.toStringAsFixed(2)),
+                    _infoRow('G-force', _gForce.toStringAsFixed(2)),
+                    _infoRow('Shake events', '$_shakeCount'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _accelerometerRunning ? null : _startAccelerometer,
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: const Text('Start Sensor'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _accelerometerRunning ? _stopAccelerometer : null,
+                          icon: const Icon(Icons.pause_rounded),
+                          label: const Text('Stop Sensor'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               ActionCard(
                 title: '1) Activity and Sedentary Coach',
                 child: Column(
@@ -470,6 +523,7 @@ class _SensorSimulationScreenState extends State<SensorSimulationScreen> {
       _minutesSinceWater = 0;
       _glassesToday = math.min(_dailyHydrationGoal + 4, _glassesToday + 1);
     });
+    _persistHydrationState();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -528,6 +582,68 @@ class _SensorSimulationScreenState extends State<SensorSimulationScreen> {
     final minute = value.minute.toString().padLeft(2, '0');
     final second = value.second.toString().padLeft(2, '0');
     return 'Logged at $hour:$minute:$second';
+  }
+
+  Future<void> _loadHydrationState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _minutesSinceWater = prefs.getInt(_hydrationMinutesKey) ?? _minutesSinceWater;
+      _glassesToday = prefs.getInt(_hydrationGlassesKey) ?? _glassesToday;
+    });
+  }
+
+  Future<void> _persistHydrationState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_hydrationMinutesKey, _minutesSinceWater);
+    await prefs.setInt(_hydrationGlassesKey, _glassesToday);
+  }
+
+  void _startAccelerometer() {
+    _accelerometerSubscription?.cancel();
+    _accelerometerSubscription = accelerometerEvents.listen((event) {
+      final x = event.x;
+      final y = event.y;
+      final z = event.z;
+      final gForce = math.sqrt(x * x + y * y + z * z) / 9.81;
+
+      var detectedShake = false;
+      final now = DateTime.now();
+      if (gForce > 2.2) {
+        if (_lastShakeTime == null || now.difference(_lastShakeTime!).inMilliseconds > 900) {
+          _lastShakeTime = now;
+          detectedShake = true;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _accelerometerRunning = true;
+        _accelX = x;
+        _accelY = y;
+        _accelZ = z;
+        _gForce = gForce;
+        if (detectedShake) {
+          _shakeCount += 1;
+          _movementScore = (_movementScore + 7).clamp(0, 100);
+        }
+      });
+
+      if (detectedShake) {
+        _raiseAlert(
+          title: 'Shake Detected',
+          message: 'Accelerometer detected strong device motion (${gForce.toStringAsFixed(2)} g).',
+          icon: Icons.vibration_rounded,
+        );
+      }
+    });
+  }
+
+  void _stopAccelerometer() {
+    _accelerometerSubscription?.cancel();
+    _accelerometerSubscription = null;
+    if (!mounted) return;
+    setState(() => _accelerometerRunning = false);
   }
 }
 

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:veda_app/src/core/services/notification_service.dart';
 import 'package:veda_app/src/features/home/presentation/main_shell.dart';
 
 class NotificationSimulatorScreen extends StatefulWidget {
@@ -13,6 +15,10 @@ class NotificationSimulatorScreen extends StatefulWidget {
 
 class _NotificationSimulatorScreenState
     extends State<NotificationSimulatorScreen> {
+  static const String _countKey = 'notif_sim_sent_count';
+  static const String _lastTitleKey = 'notif_sim_last_title';
+  static const String _lastTimeKey = 'notif_sim_last_time';
+
   static const List<_NotificationPreset> _presets = [
     _NotificationPreset(
       title: 'Appointment Reminder',
@@ -70,11 +76,16 @@ class _NotificationSimulatorScreenState
   late _NotificationPreset _selectedPreset;
   final TextEditingController _contextController = TextEditingController();
   int _delaySeconds = 0;
+  int _sentCount = 0;
+  String _lastSentTitle = '--';
+  String _lastSentTime = '--';
+  int _notificationIdCounter = 1000;
 
   @override
   void initState() {
     super.initState();
     _selectedPreset = _presets.first;
+    _loadPersistedStats();
   }
 
   @override
@@ -105,6 +116,28 @@ class _NotificationSimulatorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF3FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Delivered: $_sentCount  |  Last: $_lastSentTitle ($_lastSentTime)',
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1E3A8A)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () => NotificationService.instance.requestPermissions(),
+                        icon: const Icon(Icons.notifications_active_rounded),
+                        label: const Text('Enable System Notifications'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     DropdownButtonFormField<_NotificationPreset>(
                       value: _selectedPreset,
                       items:
@@ -256,18 +289,22 @@ class _NotificationSimulatorScreenState
       return;
     }
 
-    late final Timer timer;
-    timer = Timer(Duration(seconds: _delaySeconds), () {
-      _timers.remove(timer);
-      if (!mounted) return;
-      _deliverNotification(scheduledPreset, customContext: scheduledContext);
-    });
-    _timers.add(timer);
+    final message =
+        scheduledContext == null || scheduledContext.isEmpty
+            ? scheduledPreset.message
+            : '${scheduledPreset.message} ${scheduledContext.trim()}';
+
+    NotificationService.instance.scheduleInSeconds(
+      id: _nextNotificationId(),
+      title: scheduledPreset.title,
+      body: message,
+      delaySeconds: _delaySeconds,
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        content: Text('Simulation scheduled in ${_delaySeconds}s.'),
+        content: Text('Real notification scheduled in ${_delaySeconds}s (works in background).'),
       ),
     );
   }
@@ -283,15 +320,27 @@ class _NotificationSimulatorScreenState
 
     final now = DateTime.now();
     setState(
-      () => _history.insert(
-        0,
-        _NotificationLog(
-          title: preset.title,
-          message: message,
-          icon: preset.icon,
-          sentAt: now,
-        ),
-      ),
+      () {
+        _history.insert(
+          0,
+          _NotificationLog(
+            title: preset.title,
+            message: message,
+            icon: preset.icon,
+            sentAt: now,
+          ),
+        );
+        _sentCount += 1;
+        _lastSentTitle = preset.title;
+        _lastSentTime = _formatTimeShort(now);
+      },
+    );
+    _persistStats();
+
+    NotificationService.instance.showNow(
+      id: _nextNotificationId(),
+      title: preset.title,
+      body: message,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -320,6 +369,34 @@ class _NotificationSimulatorScreenState
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final second = dateTime.second.toString().padLeft(2, '0');
     return 'Sent at $hour:$minute:$second';
+  }
+
+  String _formatTimeShort(DateTime dateTime) {
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Future<void> _loadPersistedStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _sentCount = prefs.getInt(_countKey) ?? 0;
+      _lastSentTitle = prefs.getString(_lastTitleKey) ?? '--';
+      _lastSentTime = prefs.getString(_lastTimeKey) ?? '--';
+    });
+  }
+
+  Future<void> _persistStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_countKey, _sentCount);
+    await prefs.setString(_lastTitleKey, _lastSentTitle);
+    await prefs.setString(_lastTimeKey, _lastSentTime);
+  }
+
+  int _nextNotificationId() {
+    _notificationIdCounter += 1;
+    return _notificationIdCounter;
   }
 }
 

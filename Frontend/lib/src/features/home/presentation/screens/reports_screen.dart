@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:veda_app/src/core/config/app_config.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/health/presentation/health_controller.dart';
 import 'package:veda_app/src/features/home/presentation/screens/add_report_screen.dart';
@@ -32,6 +35,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final reports = health.reports.where((report) {
       final type = (report['report_type'] ?? '').toString();
+      if (type.toLowerCase() == 'digital prescription') {
+        return false;
+      }
       final title = (report['title'] ?? '').toString();
       final matchesFilter = _selectedFilter == 'All' || type.toLowerCase() == _selectedFilter.toLowerCase();
       final matchesSearch = query.isEmpty || title.toLowerCase().contains(query) || type.toLowerCase().contains(query);
@@ -132,8 +138,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   const CircleAvatar(
                                     radius: 22,
-                                    backgroundColor: Color(0xFFFFE8E8),
-                                    child: Icon(Icons.description_rounded, color: Color(0xFFD94242)),
+                                    backgroundColor: Color(0xFFEAF3FF),
+                                    child: Icon(Icons.description_rounded, color: Color(0xFF2F78DD)),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -142,12 +148,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       children: [
                                         Text(
                                           (report['title'] ?? 'Report').toString(),
-                                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 20,
+                                            color: Color(0xFF334155),
+                                          ),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
                                           (report['report_type'] ?? 'General').toString(),
-                                          style: const TextStyle(color: Color(0xFFD94242), fontWeight: FontWeight.w700),
+                                          style: const TextStyle(color: Color(0xFF5B88CC), fontWeight: FontWeight.w600),
                                         ),
                                       ],
                                     ),
@@ -161,11 +171,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   Expanded(
                                     child: ElevatedButton.icon(
-                                      onPressed: () {},
+                                      onPressed: () => _previewReport(report),
                                       icon: const Icon(Icons.visibility_rounded),
-                                      label: const Text('View'),
+                                      label: const Text('View Report'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF2F78DD),
+                                        backgroundColor: const Color(0xFFE8F1FF),
+                                        foregroundColor: const Color(0xFF2F78DD),
+                                        elevation: 0,
+                                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
                                       ),
                                     ),
                                   ),
@@ -225,6 +238,101 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(ok ? 'Report deleted.' : context.read<HealthController>().errorMessage ?? 'Delete failed')),
     );
+  }
+
+  Future<void> _previewReport(Map<String, dynamic> report) async {
+    final fileValue = (report['file'] ?? report['file_url'] ?? '').toString();
+    if (fileValue.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No document attached for this report.')));
+      return;
+    }
+
+    final resolvedUrl = _resolveMediaUrl(fileValue);
+    final fileName = _fileName(fileValue);
+    final isImage = _isImageFile(fileValue);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text((report['title'] ?? 'Report').toString()),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F7FB),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: isImage
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            resolvedUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.broken_image_rounded, size: 48, color: Color(0xFF94A3B8)),
+                            ),
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.picture_as_pdf_rounded, size: 58, color: Color(0xFF2F78DD)),
+                            const SizedBox(height: 10),
+                            Text(fileName, textAlign: TextAlign.center),
+                            const SizedBox(height: 6),
+                            const Text('PDF document preview', style: TextStyle(color: Color(0xFF667085))),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    fileName,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _resolveMediaUrl(String fileValue) {
+    if (fileValue.startsWith('http://') || fileValue.startsWith('https://')) {
+      return fileValue;
+    }
+    final baseUri = Uri.parse(AppConfig.baseUrl);
+    final root = baseUri.replace(path: '');
+    if (fileValue.startsWith('/')) {
+      return root.resolve(fileValue).toString();
+    }
+    return root.resolve('/$fileValue').toString();
+  }
+
+  bool _isImageFile(String path) {
+    final lower = path.toLowerCase();
+    return lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp');
+  }
+
+  String _fileName(String path) {
+    final parts = path.split(RegExp(r'[\\/]'));
+    return parts.isEmpty ? path : parts.last;
   }
 }
 

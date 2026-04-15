@@ -39,6 +39,10 @@ dependencies:
   provider: ^6.1.2
   image_picker: ^1.1.2
   file_picker: ^8.1.2
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  sensors_plus: ^5.0.1
+  geolocator: ^12.0.0
 
 dev_dependencies:
   flutter_test:

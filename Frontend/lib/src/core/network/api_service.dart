@@ -81,6 +81,13 @@ class ApiService {
     throw ApiException('Invalid medications response.');
   }
 
+  Future<Map<String, dynamic>> addMedication({
+    required String token,
+    required Map<String, dynamic> payload,
+  }) async {
+    return await _safePost('/medications/', body: payload, token: token);
+  }
+
   Future<List<Map<String, dynamic>>> fetchReports({
     required String token,
   }) async {

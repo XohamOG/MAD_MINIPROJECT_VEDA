@@ -8,6 +8,7 @@ class HealthController extends ChangeNotifier {
   final ApiService _apiService;
 
   bool _isLoadingMedications = false;
+  bool _isSavingMedication = false;
   bool _isLoadingReports = false;
   bool _isSavingAppointment = false;
   bool _isUploadingReport = false;
@@ -19,6 +20,7 @@ class HealthController extends ChangeNotifier {
   final Set<int> _takenToday = <int>{};
 
   bool get isLoadingMedications => _isLoadingMedications;
+  bool get isSavingMedication => _isSavingMedication;
   bool get isLoadingReports => _isLoadingReports;
   bool get isSavingAppointment => _isSavingAppointment;
   bool get isUploadingReport => _isUploadingReport;
@@ -47,6 +49,26 @@ class HealthController extends ChangeNotifier {
       _errorMessage = e.message;
     } finally {
       _isLoadingMedications = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addMedication({
+    required String token,
+    required Map<String, dynamic> payload,
+  }) async {
+    _isSavingMedication = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final medication = await _apiService.addMedication(token: token, payload: payload);
+      _medications = [medication, ..._medications];
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      _isSavingMedication = false;
       notifyListeners();
     }
   }
