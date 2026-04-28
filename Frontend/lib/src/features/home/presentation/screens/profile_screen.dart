@@ -3,8 +3,90 @@ import 'package:provider/provider.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/home/presentation/main_shell.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _showEditDialog() async {
+    final auth = context.read<AuthController>();
+    final user = auth.user;
+    if (user == null) return;
+
+    final fullNameController = TextEditingController(text: user.fullName);
+    final phoneController = TextEditingController(text: user.phone ?? '');
+    final bloodGroupController = TextEditingController(text: user.bloodGroup ?? '');
+    final emergencyNameController = TextEditingController(text: user.emergencyContactName ?? '');
+    final emergencyPhoneController = TextEditingController(text: user.emergencyContactPhone ?? '');
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: fullNameController, decoration: const InputDecoration(labelText: 'Full name')),
+                const SizedBox(height: 8),
+                TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Phone')),
+                const SizedBox(height: 8),
+                TextField(controller: bloodGroupController, decoration: const InputDecoration(labelText: 'Blood group')),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emergencyNameController,
+                  decoration: const InputDecoration(labelText: 'Emergency contact name'),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emergencyPhoneController,
+                  decoration: const InputDecoration(labelText: 'Emergency contact phone(s)'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Save')),
+          ],
+        );
+      },
+    );
+
+    if (result != true) {
+      fullNameController.dispose();
+      phoneController.dispose();
+      bloodGroupController.dispose();
+      emergencyNameController.dispose();
+      emergencyPhoneController.dispose();
+      return;
+    }
+
+    final ok = await auth.updateProfile(
+      payload: {
+        'full_name': fullNameController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'blood_group': bloodGroupController.text.trim(),
+        'emergency_contact_name': emergencyNameController.text.trim(),
+        'emergency_contact_phone': emergencyPhoneController.text.trim(),
+      },
+    );
+
+    fullNameController.dispose();
+    phoneController.dispose();
+    bloodGroupController.dispose();
+    emergencyNameController.dispose();
+    emergencyPhoneController.dispose();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(ok ? 'Profile updated.' : auth.errorMessage ?? 'Profile update failed.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +138,12 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: auth.isLoading ? null : _showEditDialog,
+                  icon: const Icon(Icons.edit_rounded),
+                  label: const Text('Edit profile'),
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton.icon(

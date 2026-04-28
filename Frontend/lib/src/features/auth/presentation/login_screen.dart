@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure = true;
+  String _loginAs = 'patient';
 
   @override
   void dispose() {
@@ -65,6 +66,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Sign in to continue using Ashray',
                         style: textTheme.bodyLarge?.copyWith(color: AppColors.mutedText),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Text('Patient Login'),
+                              selected: _loginAs == 'patient',
+                              onSelected: (_) => setState(() => _loginAs = 'patient'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Text('Doctor Login'),
+                              selected: _loginAs == 'doctor',
+                              onSelected: (_) => setState(() => _loginAs = 'doctor'),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 20),
                       AuthSocialButton(
@@ -166,6 +187,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                             if (!mounted) return;
                             if (ok) {
+                              final accountRole = auth.user?.role ?? 'patient';
+                              if (accountRole != _loginAs) {
+                                await auth.logout();
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'This account is a $accountRole account. Please switch login mode.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
                               Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(

@@ -15,6 +15,11 @@ class TimeStampedModel(models.Model):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    ROLE_CHOICES = (
+        ("patient", "Patient"),
+        ("doctor", "Doctor"),
+    )
+
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=150)
     phone = models.CharField(max_length=20, blank=True)
@@ -26,6 +31,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     sugar_level = models.CharField(max_length=20, blank=True)
     heart_rate = models.CharField(max_length=20, blank=True)
     weight = models.CharField(max_length=20, blank=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="patient")
+    doctor_category = models.CharField(max_length=120, blank=True)
+    doctor_area = models.CharField(max_length=120, blank=True)
+    doctor_city = models.CharField(max_length=120, blank=True)
+    daily_seat_limit = models.PositiveIntegerField(default=8)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     joined_at = models.DateTimeField(default=timezone.now)
@@ -70,6 +80,13 @@ class Appointment(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="appointments",
     )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="doctor_appointments",
+        null=True,
+        blank=True,
+    )
     doctor_name = models.CharField(max_length=150)
     specialty = models.CharField(max_length=120, blank=True)
     hospital_name = models.CharField(max_length=150, blank=True)
@@ -80,6 +97,25 @@ class Appointment(TimeStampedModel):
 
     def __str__(self):
         return f"{self.doctor_name} - {self.appointment_date}"
+
+
+class DoctorDayAvailability(TimeStampedModel):
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="day_availability",
+    )
+    date = models.DateField()
+    seat_limit = models.PositiveIntegerField(default=8)
+    is_full = models.BooleanField(default=False)
+    doctor_marked_full = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("doctor", "date")
+        ordering = ("date",)
+
+    def __str__(self):
+        return f"{self.doctor.full_name} - {self.date}"
 
 
 class MedicalReport(TimeStampedModel):

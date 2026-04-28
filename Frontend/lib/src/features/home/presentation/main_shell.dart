@@ -25,17 +25,30 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  bool _didInitialLoad = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthController>();
-      final token = auth.token;
-      if (token != null && token.isNotEmpty) {
-        context.read<HealthController>().loadDashboard(token);
-      }
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInitialLoad) return;
+
+    final auth = context.watch<AuthController>();
+    final token = auth.token;
+    if (token != null && token.isNotEmpty) {
+      _didInitialLoad = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final health = context.read<HealthController>();
+        health.loadDashboard(token);
+        health.startAutoSync(token);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    context.read<HealthController>().stopAutoSync();
+    super.dispose();
   }
 
   @override

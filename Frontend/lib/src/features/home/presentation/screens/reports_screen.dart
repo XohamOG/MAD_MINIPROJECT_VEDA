@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:veda_app/src/core/config/app_config.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/health/presentation/health_controller.dart';
 import 'package:veda_app/src/features/home/presentation/screens/add_report_screen.dart';
@@ -161,7 +163,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   Expanded(
                                     child: ElevatedButton.icon(
-                                      onPressed: () {},
+                                      onPressed: () => _openReport(report),
                                       icon: const Icon(Icons.visibility_rounded),
                                       label: const Text('View'),
                                       style: ElevatedButton.styleFrom(
@@ -226,6 +228,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
       SnackBar(content: Text(ok ? 'Report deleted.' : context.read<HealthController>().errorMessage ?? 'Delete failed')),
     );
   }
+
+  Future<void> _openReport(Map<String, dynamic> report) async {
+    final fileValue = (report['file'] ?? '').toString().trim();
+    if (fileValue.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No report file is attached.')),
+      );
+      return;
+    }
+
+    final uri = _resolveReportUri(fileValue);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the report file.')),
+      );
+    }
+  }
+
+  Uri _resolveReportUri(String fileValue) {
+    final parsed = Uri.tryParse(fileValue);
+    if (parsed != null && parsed.hasScheme) {
+      return parsed;
+    }
+
+    final apiUri = Uri.parse(AppConfig.baseUrl);
+    final origin = '${apiUri.scheme}://${apiUri.authority}';
+    final normalizedPath = fileValue.startsWith('/') ? fileValue.substring(1) : fileValue;
+    return Uri.parse('$origin/$normalizedPath');
+  }
+
 }
 
 class _MiniIconButton extends StatelessWidget {

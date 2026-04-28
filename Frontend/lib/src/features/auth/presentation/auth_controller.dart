@@ -26,6 +26,8 @@ class AuthController extends ChangeNotifier {
   String? get token => _token;
   AuthUser? get user => _user;
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
+  bool get isDoctor => _user?.role == 'doctor';
+  bool get isPatient => _user?.role != 'doctor';
 
   Future<void> restoreSession() async {
     _isCheckingSession = true;
@@ -120,5 +122,30 @@ class AuthController extends ChangeNotifier {
     _errorMessage = null;
     await _tokenStorage.clearToken();
     notifyListeners();
+  }
+
+  Future<bool> updateProfile({
+    required Map<String, dynamic> payload,
+  }) async {
+    if (_token == null || _token!.isEmpty) {
+      _errorMessage = 'You are not logged in.';
+      notifyListeners();
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _user = await _apiService.updateMe(token: _token!, payload: payload);
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

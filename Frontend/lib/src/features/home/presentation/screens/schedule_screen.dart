@@ -19,18 +19,32 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final token = auth.token;
     if (token == null || token.isEmpty) return;
 
+    final health = context.read<HealthController>();
+    await health.fetchDoctors(
+      token: token,
+      area: 'Chembur',
+      city: 'Mumbai',
+      date: DateTime.now().toIso8601String().split('T').first,
+    );
+    if (!mounted) return;
+
+    if (health.doctors.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No doctors available right now.')),
+      );
+      return;
+    }
+
     final result = await showDialog<_AppointmentDraft>(
       context: context,
-      builder: (context) => const _AddAppointmentDialog(),
+      builder: (context) => _AddAppointmentDialog(doctors: health.doctors),
     );
 
     if (result == null) return;
     final ok = await context.read<HealthController>().addAppointment(
           token: token,
           payload: {
-            'doctor_name': result.doctorName,
-            'specialty': result.specialty,
-            'hospital_name': result.hospitalName,
+            'doctor_id': result.doctorId,
             'appointment_date': result.date,
             'appointment_time': result.time,
             'reason': result.reason,
@@ -130,42 +144,35 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
 class _AppointmentDraft {
   const _AppointmentDraft({
-    required this.doctorName,
-    required this.specialty,
-    required this.hospitalName,
+    required this.doctorId,
     required this.date,
     required this.time,
     required this.reason,
   });
 
-  final String doctorName;
-  final String specialty;
-  final String hospitalName;
+  final int doctorId;
   final String date;
   final String time;
   final String reason;
 }
 
 class _AddAppointmentDialog extends StatefulWidget {
-  const _AddAppointmentDialog();
+  const _AddAppointmentDialog({required this.doctors});
+
+  final List<Map<String, dynamic>> doctors;
 
   @override
   State<_AddAppointmentDialog> createState() => _AddAppointmentDialogState();
 }
 
 class _AddAppointmentDialogState extends State<_AddAppointmentDialog> {
-  final _doctorController = TextEditingController();
-  final _specialtyController = TextEditingController();
-  final _hospitalController = TextEditingController();
   final _reasonController = TextEditingController();
   DateTime _date = DateTime.now();
   TimeOfDay _time = TimeOfDay.now();
+  int? _selectedDoctorId;
 
   @override
   void dispose() {
-    _doctorController.dispose();
-    _specialtyController.dispose();
-    _hospitalController.dispose();
     _reasonController.dispose();
     super.dispose();
   }
@@ -179,11 +186,23 @@ class _AddAppointmentDialogState extends State<_AddAppointmentDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: _doctorController, decoration: const InputDecoration(labelText: 'Doctor name')),
-            const SizedBox(height: 8),
-            TextField(controller: _specialtyController, decoration: const InputDecoration(labelText: 'Specialty')),
-            const SizedBox(height: 8),
-            TextField(controller: _hospitalController, decoration: const InputDecoration(labelText: 'Hospital')),
+            DropdownButtonFormField<int>(
+              value: _selectedDoctorId,
+              decoration: const InputDecoration(labelText: 'Doctor'),
+              items: widget.doctors
+                  .where((doc) => doc['id'] is int)
+                  .map(
+                    (doc) => DropdownMenuItem<int>(
+                      value: doc['id'] as int,
+                      child: Text(
+                        '${doc['full_name']} (${doc['doctor_category']})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _selectedDoctorId = value),
+            ),
             const SizedBox(height: 8),
             TextField(controller: _reasonController, decoration: const InputDecoration(labelText: 'Reason')),
             const SizedBox(height: 8),
@@ -225,12 +244,16 @@ class _AddAppointmentDialogState extends State<_AddAppointmentDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ElevatedButton(
           onPressed: () {
+            if (_selectedDoctorId == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please select a doctor.')),
+              );
+              return;
+            }
             Navigator.pop(
               context,
               _AppointmentDraft(
-                doctorName: _doctorController.text.trim(),
-                specialty: _specialtyController.text.trim(),
-                hospitalName: _hospitalController.text.trim(),
+                doctorId: _selectedDoctorId!,
                 date: _date.toIso8601String().split('T').first,
                 time: '${_time.hour.toString().padLeft(2, '0')}:${_time.minute.toString().padLeft(2, '0')}:00',
                 reason: _reasonController.text.trim(),

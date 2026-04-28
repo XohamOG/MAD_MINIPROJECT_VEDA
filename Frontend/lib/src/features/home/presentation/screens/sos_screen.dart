@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
 import 'package:veda_app/src/features/health/presentation/health_controller.dart';
 import 'package:veda_app/src/features/home/presentation/main_shell.dart';
@@ -96,7 +98,7 @@ class _SosScreenState extends State<SosScreen> {
                     leading: Icon(Icons.location_on_rounded, color: Color(0xFFB71C1C)),
                     title: Text('Location sharing'),
                     subtitle: Text(
-                      'Current location is shared with emergency responders when SOS is pressed.',
+                      'SOS sends location and opens an SMS draft for your emergency contact numbers.',
                     ),
                   ),
                 ),
@@ -113,16 +115,79 @@ class _SosScreenState extends State<SosScreen> {
     final token = auth.token;
     if (token == null || token.isEmpty) return;
 
+    final user = auth.user;
+
     setState(() => _sending = true);
+
+    Position? position;
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        var permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+          position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        }
+      }
+    } catch (_) {
+      // Continue SOS flow even if location cannot be fetched.
+    }
+
+    final locationText = position == null
+        ? 'Location unavailable'
+        : 'https://maps.google.com/?q=${_roundTo6(position.latitude)},${_roundTo6(position.longitude)}';
+    final message = _messageController.text.trim().isEmpty ? 'Need immediate help' : _messageController.text.trim();
+    final sosMessage = '$message | $locationText';
+
     final ok = await context.read<HealthController>().triggerSos(
           token: token,
-          message: _messageController.text.trim().isEmpty ? 'Need immediate help' : _messageController.text.trim(),
+          message: sosMessage,
+          latitude: position == null ? null : _roundTo6(position.latitude),
+          longitude: position == null ? null : _roundTo6(position.longitude),
         );
+
+    if (ok) {
+      final phones = _parseEmergencyPhones(user?.emergencyContactPhone);
+      if (phones.isNotEmpty) {
+        final smsBody = Uri.encodeComponent(
+          'SOS from ${user?.fullName ?? 'patient'}: $message\nLocation: $locationText',
+        );
+        final recipients = Uri.encodeComponent(phones.join(','));
+        final smsUri = Uri.parse('sms:$recipients?body=$smsBody');
+        await launchUrl(smsUri);
+      }
+    }
+
     if (!mounted) return;
     setState(() => _sending = false);
 
+    final hasContact = _parseEmergencyPhones(user?.emergencyContactPhone).isNotEmpty;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? 'Emergency alert sent.' : context.read<HealthController>().errorMessage ?? 'Failed')),
+      SnackBar(
+        content: Text(
+          ok
+              ? (hasContact
+                  ? 'Emergency alert sent with location.'
+                  : 'Emergency alert logged. Add emergency phone in profile to send SMS.')
+              : context.read<HealthController>().errorMessage ?? 'Failed',
+        ),
+      ),
     );
+  }
+
+  List<String> _parseEmergencyPhones(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return <String>[];
+    return raw
+        .split(RegExp(r'[;,]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  double _roundTo6(double value) {
+    return double.parse(value.toStringAsFixed(6));
   }
 }

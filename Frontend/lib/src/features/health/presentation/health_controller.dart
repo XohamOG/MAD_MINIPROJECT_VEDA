@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:veda_app/src/core/network/api_exception.dart';
 import 'package:veda_app/src/core/network/api_service.dart';
 
@@ -11,21 +12,32 @@ class HealthController extends ChangeNotifier {
   bool _isLoadingReports = false;
   bool _isSavingAppointment = false;
   bool _isUploadingReport = false;
+  bool _isLoadingDoctors = false;
+  bool _isUpdatingDoctorDayStatus = false;
   String? _errorMessage;
 
   List<Map<String, dynamic>> _medications = [];
   List<Map<String, dynamic>> _reports = [];
   List<Map<String, dynamic>> _appointments = [];
+  List<Map<String, dynamic>> _doctors = [];
+  List<Map<String, dynamic>> _doctorAppointments = [];
+  Map<String, dynamic>? _doctorDayStatus;
   final Set<int> _takenToday = <int>{};
+  Timer? _dashboardSyncTimer;
 
   bool get isLoadingMedications => _isLoadingMedications;
   bool get isLoadingReports => _isLoadingReports;
   bool get isSavingAppointment => _isSavingAppointment;
   bool get isUploadingReport => _isUploadingReport;
+  bool get isLoadingDoctors => _isLoadingDoctors;
+  bool get isUpdatingDoctorDayStatus => _isUpdatingDoctorDayStatus;
   String? get errorMessage => _errorMessage;
   List<Map<String, dynamic>> get medications => _medications;
   List<Map<String, dynamic>> get reports => _reports;
   List<Map<String, dynamic>> get appointments => _appointments;
+  List<Map<String, dynamic>> get doctors => _doctors;
+  List<Map<String, dynamic>> get doctorAppointments => _doctorAppointments;
+  Map<String, dynamic>? get doctorDayStatus => _doctorDayStatus;
 
   bool isMedicationTakenToday(int id) => _takenToday.contains(id);
 
@@ -35,6 +47,18 @@ class HealthController extends ChangeNotifier {
       fetchReports(token),
       fetchAppointments(token),
     ]);
+  }
+
+  void startAutoSync(String token) {
+    _dashboardSyncTimer?.cancel();
+    _dashboardSyncTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      loadDashboard(token);
+    });
+  }
+
+  void stopAutoSync() {
+    _dashboardSyncTimer?.cancel();
+    _dashboardSyncTimer = null;
   }
 
   Future<void> fetchMedications(String token) async {
@@ -47,6 +71,24 @@ class HealthController extends ChangeNotifier {
       _errorMessage = e.message;
     } finally {
       _isLoadingMedications = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addMedication({
+    required String token,
+    required Map<String, dynamic> payload,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final medication = await _apiService.addMedication(token: token, payload: payload);
+      _medications = [medication, ..._medications];
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
       notifyListeners();
     }
   }
@@ -124,6 +166,91 @@ class HealthController extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchDoctors({
+    required String token,
+    String area = 'Chembur',
+    String city = 'Mumbai',
+    String category = '',
+    String? date,
+  }) async {
+    _isLoadingDoctors = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _doctors = await _apiService.fetchDoctors(
+        token: token,
+        area: area,
+        city: city,
+        category: category,
+        date: date,
+      );
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } finally {
+      _isLoadingDoctors = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchDoctorAppointments({
+    required String token,
+    String? date,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _doctorAppointments = await _apiService.fetchDoctorAppointments(
+        token: token,
+        date: date,
+      );
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchDoctorDayStatus({
+    required String token,
+    required String date,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _doctorDayStatus = await _apiService.fetchDoctorDayStatus(token: token, date: date);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateDoctorDayStatus({
+    required String token,
+    required String date,
+    required bool isFull,
+    int? seatLimit,
+  }) async {
+    _isUpdatingDoctorDayStatus = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _doctorDayStatus = await _apiService.updateDoctorDayStatus(
+        token: token,
+        date: date,
+        isFull: isFull,
+        seatLimit: seatLimit,
+      );
+      return true;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      _isUpdatingDoctorDayStatus = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> uploadReport({
     required String token,
     required String title,
@@ -195,5 +322,11 @@ class HealthController extends ChangeNotifier {
     } finally {
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    stopAutoSync();
+    super.dispose();
   }
 }

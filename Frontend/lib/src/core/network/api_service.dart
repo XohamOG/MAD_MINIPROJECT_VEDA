@@ -37,6 +37,17 @@ class ApiService {
     throw ApiException('Invalid user profile response.');
   }
 
+  Future<AuthUser> updateMe({
+    required String token,
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _safePatch('/auth/me/', body: payload, token: token);
+    if (response is Map<String, dynamic>) {
+      return AuthUser.fromJson(response);
+    }
+    throw ApiException('Invalid profile update response.');
+  }
+
   Future<AuthResponse> register({
     required String fullName,
     required String email,
@@ -81,6 +92,13 @@ class ApiService {
     throw ApiException('Invalid medications response.');
   }
 
+  Future<Map<String, dynamic>> addMedication({
+    required String token,
+    required Map<String, dynamic> payload,
+  }) async {
+    return await _safePost('/medications/', body: payload, token: token);
+  }
+
   Future<List<Map<String, dynamic>>> fetchReports({
     required String token,
   }) async {
@@ -99,6 +117,69 @@ class ApiService {
       return response.whereType<Map<String, dynamic>>().toList();
     }
     throw ApiException('Invalid appointments response.');
+  }
+
+  Future<List<Map<String, dynamic>>> fetchDoctors({
+    required String token,
+    String? area,
+    String? category,
+    String? city,
+    String? date,
+  }) async {
+    final path = _withQuery('/doctors/', {
+      if (area != null && area.isNotEmpty) 'area': area,
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (city != null && city.isNotEmpty) 'city': city,
+      if (date != null && date.isNotEmpty) 'date': date,
+    });
+    final response = await _safeGet(path, token: token);
+    if (response is List) {
+      return response.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException('Invalid doctors response.');
+  }
+
+  Future<Map<String, dynamic>> fetchDoctorDayStatus({
+    required String token,
+    required String date,
+  }) async {
+    final path = _withQuery('/doctor/day-status/', {'date': date});
+    final response = await _safeGet(path, token: token);
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+    throw ApiException('Invalid doctor day status response.');
+  }
+
+  Future<Map<String, dynamic>> updateDoctorDayStatus({
+    required String token,
+    required String date,
+    required bool isFull,
+    int? seatLimit,
+  }) async {
+    return _safePost(
+      '/doctor/day-status/',
+      token: token,
+      body: {
+        'date': date,
+        'is_full': isFull,
+        if (seatLimit != null) 'seat_limit': seatLimit,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchDoctorAppointments({
+    required String token,
+    String? date,
+  }) async {
+    final path = _withQuery('/doctor/appointments/', {
+      if (date != null && date.isNotEmpty) 'date': date,
+    });
+    final response = await _safeGet(path, token: token);
+    if (response is List) {
+      return response.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException('Invalid doctor appointments response.');
   }
 
   Future<Map<String, dynamic>> addAppointment({
@@ -270,6 +351,39 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> _safePatch(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    try {
+      final response = await _client
+          .patch(
+            Uri.parse('${AppConfig.baseUrl}$path'),
+            headers: _headers(token: token),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+      final data = _decodeJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data;
+      }
+      throw ApiException(
+        _extractMessage(data) ?? 'Request failed.',
+        statusCode: response.statusCode,
+      );
+    } on TimeoutException {
+      throw ApiException('Request timed out. Please try again.');
+    } on SocketException {
+      throw ApiException('No internet connection.');
+    } on http.ClientException {
+      throw ApiException('Network error. Check backend URL.');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Unexpected error occurred.');
+    }
+  }
+
   Map<String, String> _headers({String? token}) {
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -313,5 +427,15 @@ class ApiService {
       return _extractMessage(data);
     }
     return null;
+  }
+
+  String _withQuery(String path, Map<String, String> query) {
+    if (query.isEmpty) {
+      return path;
+    }
+    final encoded = query.entries
+        .map((entry) => '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(entry.value)}')
+        .join('&');
+    return '$path?$encoded';
   }
 }

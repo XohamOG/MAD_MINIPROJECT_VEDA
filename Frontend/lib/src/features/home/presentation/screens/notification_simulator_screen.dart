@@ -1,352 +1,218 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
+import 'package:veda_app/src/features/health/presentation/health_controller.dart';
 import 'package:veda_app/src/features/home/presentation/main_shell.dart';
 
 class NotificationSimulatorScreen extends StatefulWidget {
   const NotificationSimulatorScreen({super.key});
 
   @override
-  State<NotificationSimulatorScreen> createState() =>
-      _NotificationSimulatorScreenState();
+  State<NotificationSimulatorScreen> createState() => _NotificationSimulatorScreenState();
 }
 
-class _NotificationSimulatorScreenState
-    extends State<NotificationSimulatorScreen> {
-  static const List<_NotificationPreset> _presets = [
-    _NotificationPreset(
-      title: 'Appointment Reminder',
-      message: 'You have a follow-up with Dr. Sharma today at 5:30 PM.',
-      category: 'Appointments',
-      icon: Icons.event_available_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Medicine Time',
-      message: 'Take 1 tablet of Metformin now with water.',
-      category: 'Medicines',
-      icon: Icons.medication_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Medicine Refill Alert',
-      message: 'Only 2 doses left of Amlodipine. Refill today.',
-      category: 'Medicines',
-      icon: Icons.local_pharmacy_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Lab Report Ready',
-      message: 'Your blood test report is now available for review.',
-      category: 'Reports',
-      icon: Icons.description_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Hydration Reminder',
-      message: 'It is time to drink a glass of water.',
-      category: 'Wellness',
-      icon: Icons.water_drop_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Vitals Check-In',
-      message: 'Please log blood pressure and glucose readings.',
-      category: 'Monitoring',
-      icon: Icons.monitor_heart_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Walk Break',
-      message: 'Take a 10-minute walk to stay active.',
-      category: 'Wellness',
-      icon: Icons.directions_walk_rounded,
-    ),
-    _NotificationPreset(
-      title: 'Sleep Routine',
-      message: 'Prepare for bed to keep your sleep schedule consistent.',
-      category: 'Wellness',
-      icon: Icons.bedtime_rounded,
-    ),
-  ];
-
-  final List<Timer> _timers = <Timer>[];
-  final List<_NotificationLog> _history = <_NotificationLog>[];
-
-  late _NotificationPreset _selectedPreset;
-  final TextEditingController _contextController = TextEditingController();
-  int _delaySeconds = 0;
-
+class _NotificationSimulatorScreenState extends State<NotificationSimulatorScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedPreset = _presets.first;
-  }
-
-  @override
-  void dispose() {
-    for (final timer in _timers) {
-      timer.cancel();
-    }
-    _contextController.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final token = context.read<AuthController>().token;
+      if (token != null && token.isNotEmpty) {
+        await context.read<HealthController>().loadDashboard(token);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final auth = context.watch<AuthController>();
+    final health = context.watch<HealthController>();
+    final alerts = _buildAlerts(health);
 
-    return Column(
-      children: [
-        const GradientHeader(
-          title: 'Notification Simulator',
-          subtitle: 'Preview reminder alerts for health workflows',
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              ActionCard(
-                title: 'Simulate notification',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DropdownButtonFormField<_NotificationPreset>(
-                      value: _selectedPreset,
-                      items:
-                          _presets
-                              .map(
-                                (preset) =>
-                                    DropdownMenuItem<_NotificationPreset>(
-                                      value: preset,
-                                      child: Text(preset.title),
-                                    ),
-                              )
-                              .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _selectedPreset = value);
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Notification type',
-                        border: OutlineInputBorder(),
+    return SafeArea(
+      child: Column(
+        children: [
+          const GradientHeader(
+            title: 'Notifications',
+            subtitle: 'Real appointment and medication reminders',
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                final token = auth.token;
+                if (token != null && token.isNotEmpty) {
+                  await context.read<HealthController>().loadDashboard(token);
+                }
+              },
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Active reminders',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _contextController,
-                      decoration: const InputDecoration(
-                        labelText: 'Additional context (optional)',
-                        hintText:
-                            'Example: Bring previous reports and insurance card.',
-                        border: OutlineInputBorder(),
+                      Text('${alerts.length} total'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (alerts.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(18),
+                        child: Text('No real notifications right now.'),
                       ),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Delay: ${_delaySeconds}s',
-                      style: textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Slider(
-                      value: _delaySeconds.toDouble(),
-                      min: 0,
-                      max: 30,
-                      divisions: 30,
-                      label: '${_delaySeconds}s',
-                      onChanged:
-                          (value) =>
-                              setState(() => _delaySeconds = value.round()),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _simulateSelectedNotification,
-                        icon: const Icon(Icons.notifications_active_rounded),
-                        label: Text(
-                          _delaySeconds == 0
-                              ? 'Send Simulation Now'
-                              : 'Schedule in ${_delaySeconds}s',
+                    )
+                  else
+                    ...alerts.map(
+                      (alert) => Card(
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: alert.color.withOpacity(0.12),
+                            child: Icon(alert.icon, color: alert.color),
+                          ),
+                          title: Text(alert.title),
+                          subtitle: Text(
+                            alert.scheduledAt == null
+                                ? alert.message
+                                : '${alert.message}\n${_formatDateTime(alert.scheduledAt!)}',
+                          ),
+                          isThreeLine: alert.scheduledAt != null,
+                          trailing: Chip(label: Text(alert.category)),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Recommended healthcare notifications',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ..._presets.map(
-                (preset) => Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFFE8F5F1),
-                      child: Icon(preset.icon, color: const Color(0xFF1D7E68)),
-                    ),
-                    title: Text(preset.title),
-                    subtitle: Text(
-                      '${preset.message}\nCategory: ${preset.category}',
-                    ),
-                    isThreeLine: true,
-                    trailing: OutlinedButton(
-                      onPressed:
-                          () =>
-                              _deliverNotification(preset, customContext: null),
-                      child: const Text('Send'),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Simulation history',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed:
-                        _history.isEmpty
-                            ? null
-                            : () => setState(_history.clear),
-                    child: const Text('Clear'),
-                  ),
                 ],
               ),
-              if (_history.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Text('No notifications simulated yet.'),
-                  ),
-                )
-              else
-                ..._history.map(
-                  (item) => Card(
-                    child: ListTile(
-                      leading: Icon(item.icon, color: const Color(0xFF1D7E68)),
-                      title: Text(item.title),
-                      subtitle: Text(
-                        '${item.message}\n${_formatTime(item.sentAt)}',
-                      ),
-                      isThreeLine: true,
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  void _simulateSelectedNotification() {
-    final scheduledPreset = _selectedPreset;
-    final contextText = _contextController.text.trim();
-    final scheduledContext = contextText.isEmpty ? null : contextText;
+  List<_HealthAlert> _buildAlerts(HealthController health) {
+    final alerts = <_HealthAlert>[];
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
-    if (_delaySeconds == 0) {
-      _deliverNotification(scheduledPreset, customContext: scheduledContext);
-      return;
+    for (final appointment in health.appointments) {
+      final status = (appointment['status'] ?? 'scheduled').toString().toLowerCase();
+      if (status != 'scheduled') continue;
+
+      final scheduledAt = _parseAppointmentDateTime(
+        appointment['appointment_date']?.toString(),
+        appointment['appointment_time']?.toString(),
+      );
+      if (scheduledAt != null && scheduledAt.isBefore(today.subtract(const Duration(days: 1)))) {
+        continue;
+      }
+
+      final doctorName = (appointment['doctor_name'] ?? 'Doctor').toString();
+      final dateText = appointment['appointment_date']?.toString() ?? 'soon';
+      final timeText = appointment['appointment_time']?.toString() ?? '--:--';
+      alerts.add(
+        _HealthAlert(
+          title: 'Appointment reminder',
+          message: '$doctorName on $dateText at $timeText',
+          category: 'Appointment',
+          icon: Icons.event_available_rounded,
+          color: const Color(0xFF1E63C2),
+          scheduledAt: scheduledAt,
+        ),
+      );
     }
 
-    late final Timer timer;
-    timer = Timer(Duration(seconds: _delaySeconds), () {
-      _timers.remove(timer);
-      if (!mounted) return;
-      _deliverNotification(scheduledPreset, customContext: scheduledContext);
+    for (final medication in health.medications) {
+      if ((medication['is_active'] ?? true) != true) continue;
+
+      final startDate = _parseDate(medication['start_date']?.toString());
+      final endDate = _parseDate(medication['end_date']?.toString());
+      if (startDate != null && startDate.isAfter(today)) {
+        continue;
+      }
+      if (endDate != null && endDate.isBefore(today)) {
+        continue;
+      }
+
+      alerts.add(
+        _HealthAlert(
+          title: 'Medication reminder',
+          message:
+              '${medication['name'] ?? 'Medication'} - ${(medication['dosage'] ?? '').toString()} ${(medication['frequency'] ?? '').toString()}'.trim(),
+          category: 'Medication',
+          icon: Icons.medication_rounded,
+          color: const Color(0xFF1D7E68),
+          scheduledAt: _combineDateAndTime(today, medication['reminder_time']?.toString()),
+        ),
+      );
+    }
+
+    alerts.sort((left, right) {
+      final leftTime = left.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final rightTime = right.scheduledAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return leftTime.compareTo(rightTime);
     });
-    _timers.add(timer);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text('Simulation scheduled in ${_delaySeconds}s.'),
-      ),
-    );
+    return alerts;
   }
 
-  void _deliverNotification(
-    _NotificationPreset preset, {
-    String? customContext,
-  }) {
-    final message =
-        customContext == null || customContext.isEmpty
-            ? preset.message
-            : '${preset.message} ${customContext.trim()}';
+  DateTime? _parseAppointmentDateTime(String? dateText, String? timeText) {
+    final date = _parseDate(dateText);
+    if (date == null) return null;
 
-    final now = DateTime.now();
-    setState(
-      () => _history.insert(
-        0,
-        _NotificationLog(
-          title: preset.title,
-          message: message,
-          icon: preset.icon,
-          sentAt: now,
-        ),
-      ),
-    );
+    if (timeText == null || timeText.trim().isEmpty) return date;
+    final parts = timeText.split(':');
+    if (parts.length < 2) return date;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return date;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        content: Row(
-          children: [
-            Icon(preset.icon, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '${preset.title}\n$message',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
-  String _formatTime(DateTime dateTime) {
+  DateTime? _combineDateAndTime(DateTime date, String? timeText) {
+    if (timeText == null || timeText.trim().isEmpty) return date;
+    final parts = timeText.split(':');
+    if (parts.length < 2) return date;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return date;
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  DateTime? _parseDate(String? dateText) {
+    if (dateText == null || dateText.trim().isEmpty) return null;
+    return DateTime.tryParse(dateText.trim());
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final year = dateTime.year.toString();
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
-    final second = dateTime.second.toString().padLeft(2, '0');
-    return 'Sent at $hour:$minute:$second';
+    return '$day-$month-$year  $hour:$minute';
   }
 }
 
-class _NotificationPreset {
-  const _NotificationPreset({
+class _HealthAlert {
+  const _HealthAlert({
     required this.title,
     required this.message,
     required this.category,
     required this.icon,
+    required this.color,
+    this.scheduledAt,
   });
 
   final String title;
   final String message;
   final String category;
   final IconData icon;
-}
-
-class _NotificationLog {
-  const _NotificationLog({
-    required this.title,
-    required this.message,
-    required this.icon,
-    required this.sentAt,
-  });
-
-  final String title;
-  final String message;
-  final IconData icon;
-  final DateTime sentAt;
+  final Color color;
+  final DateTime? scheduledAt;
 }
