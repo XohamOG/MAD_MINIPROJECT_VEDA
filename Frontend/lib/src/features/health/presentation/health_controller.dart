@@ -9,6 +9,7 @@ class HealthController extends ChangeNotifier {
   final ApiService _apiService;
 
   bool _isLoadingMedications = false;
+  bool _isSavingMedication = false;
   bool _isLoadingReports = false;
   bool _isSavingAppointment = false;
   bool _isUploadingReport = false;
@@ -26,6 +27,7 @@ class HealthController extends ChangeNotifier {
   Timer? _dashboardSyncTimer;
 
   bool get isLoadingMedications => _isLoadingMedications;
+  bool get isSavingMedication => _isSavingMedication;
   bool get isLoadingReports => _isLoadingReports;
   bool get isSavingAppointment => _isSavingAppointment;
   bool get isUploadingReport => _isUploadingReport;

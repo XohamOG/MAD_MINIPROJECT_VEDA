@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
@@ -66,19 +68,50 @@ class HealthDashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               ActionCard(
-                title: 'Weekly trend',
-                child: Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF7F2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Chart Placeholder',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF2C6E5E)),
+                title: 'Vitals trend',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Based on the latest profile readings',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: const Color(0xFF64748B)),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: 220,
+                      child: CustomPaint(
+                        painter: _VitalsTrendPainter(chartData.points),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: chartData.points
+                                .map(
+                                  (point) => Expanded(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          point.displayValue,
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          point.label,
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF64748B)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,6 +36,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final reports = health.reports.where((report) {
       final type = (report['report_type'] ?? '').toString();
+      if (type.toLowerCase() == 'digital prescription') {
+        return false;
+      }
       final title = (report['title'] ?? '').toString();
       final matchesFilter = _selectedFilter == 'All' || type.toLowerCase() == _selectedFilter.toLowerCase();
       final matchesSearch = query.isEmpty || title.toLowerCase().contains(query) || type.toLowerCase().contains(query);
@@ -134,8 +139,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 children: [
                                   const CircleAvatar(
                                     radius: 22,
-                                    backgroundColor: Color(0xFFFFE8E8),
-                                    child: Icon(Icons.description_rounded, color: Color(0xFFD94242)),
+                                    backgroundColor: Color(0xFFEAF3FF),
+                                    child: Icon(Icons.description_rounded, color: Color(0xFF2F78DD)),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -144,12 +149,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       children: [
                                         Text(
                                           (report['title'] ?? 'Report').toString(),
-                                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 20,
+                                            color: Color(0xFF334155),
+                                          ),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
                                           (report['report_type'] ?? 'General').toString(),
-                                          style: const TextStyle(color: Color(0xFFD94242), fontWeight: FontWeight.w700),
+                                          style: const TextStyle(color: Color(0xFF5B88CC), fontWeight: FontWeight.w600),
                                         ),
                                       ],
                                     ),
@@ -165,9 +174,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     child: ElevatedButton.icon(
                                       onPressed: () => _openReport(report),
                                       icon: const Icon(Icons.visibility_rounded),
-                                      label: const Text('View'),
+                                      label: const Text('View Report'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF2F78DD),
+                                        backgroundColor: const Color(0xFFE8F1FF),
+                                        foregroundColor: const Color(0xFF2F78DD),
+                                        elevation: 0,
+                                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
                                       ),
                                     ),
                                   ),

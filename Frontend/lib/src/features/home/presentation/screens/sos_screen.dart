@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:veda_app/src/features/auth/presentation/auth_controller.dart';
@@ -16,6 +17,16 @@ class SosScreen extends StatefulWidget {
 class _SosScreenState extends State<SosScreen> {
   final _messageController = TextEditingController(text: 'Need immediate help');
   bool _sending = false;
+  bool _resolvingLocation = false;
+  double? _latitude;
+  double? _longitude;
+  String _locationStatus = 'Location not fetched yet';
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveCurrentLocation();
+  }
 
   @override
   void dispose() {
@@ -93,10 +104,10 @@ class _SosScreenState extends State<SosScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Card(
+                Card(
                   child: ListTile(
-                    leading: Icon(Icons.location_on_rounded, color: Color(0xFFB71C1C)),
-                    title: Text('Location sharing'),
+                    leading: const Icon(Icons.location_on_rounded, color: Color(0xFFB71C1C)),
+                    title: const Text('Location sharing'),
                     subtitle: Text(
                       'SOS sends location and opens an SMS draft for your emergency contact numbers.',
                     ),
